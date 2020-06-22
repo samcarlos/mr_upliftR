@@ -13,11 +13,11 @@ knitr::opts_chunk$set(message = FALSE)
 
 # Introduction 
 
-Uplift models (or heterogenous treatment effect models) is a branch of machine learning with the goal of maximing some objective function by assigning an optimal treatment to each individual. In practice it is often ambiguous on what the tradeoffs should objective functions be for several different responses.  For instance, when applied to marketing the objective function should be to increase user behavior while maintaing some level of costs. The tradeoffs between an increase in user behavior and increase in costs are often not defined a-priori.
+Uplift models (or heterogenous treatment effect models) is a branch of machine learning with the goal of maximing some objective function by assigning an optimal treatment to each individual. In practice it is often ambiguous objective function should be.  For instance, when applied to marketing campaign the objective function might be to increase user behavior (of some sort) while maintaing some level of costs. The tradeoffs between an increase in user behavior and increase in costs are often not defined a-priori.
 
-The mr_uplift package in python builds and evaluates tradeoffs among several different response variables of interest. It can estimate something akin to a [PPF](https://en.wikipedia.org/wiki/Production%E2%80%93possibility_frontier#:~:text=A%20production%E2%80%93possibility%20frontier%20(PPF,two%20products%20that%20can%20be) for uplift models. 
+The [mr_uplift](https://github.com/Ibotta/mr_uplift) package in python builds and evaluates tradeoffs among several different response variables of interest. It can estimate something akin to a [Production Possibility Frontier](https://en.wikipedia.org/wiki/Production%E2%80%93possibility_frontier#) for uplift models. 
 
-In the post below I use the GOTV dataset to construct a hypothetical problem where we are interesting in increasing voter turnout while being cognizant of the costs involved. In it I will highlight some functionality of the mr_uplift package that I have found to be helpful in practice. In particular I will discuss:
+In this post I use the GOTV dataset to construct a hypothetical problem where we are interested in increasing voter turnout while being cognizant of the costs involved. In it I will highlight some functionality of the mr_uplift package that I have found to be helpful in practice. In particular I will discuss:
 
    - Encoding treatment variables that may share common features 
    - Evaluating tradeoffs among different response variables
@@ -28,13 +28,13 @@ In the post below I use the GOTV dataset to construct a hypothetical problem whe
 
 ## GOTV Data and Preprocessing
 
-The data used in this example is the GOTV dataset. This is a randomized experiment where ~45% of individuals recieved one of four letters (treatments) in the mail designed to increase voter turnout in the subsequent election. More information on the experiment can be found [here](https://isps.yale.edu/sites/default/files/publication/2012/12/ISPS08-001.pdf).
+The GOTV data is used in this post. This is a randomized experiment where ~45% of individuals recieved one of four letters (treatments) in the mail designed to increase voter turnout in the subsequent election. The remaing 55% recieve no letter and are desgniated the control. More information on the experiment can be found [here](https://isps.yale.edu/sites/default/files/publication/2012/12/ISPS08-001.pdf).
 
-Using individual level data we are tasked with building an uplift model to increas voter turnout by assigning one of the 5 treatments (I consider the control to be a treatment in addition to four possible letters) to each individual.
+Using individual level data we are tasked with building an uplift model to increase voter turnout by assigning one of the 5 treatments (I consider the control to be a treatment in addition to four possible letters) to each individual.
 
 For this example I include an additional assumption where sending one of the four letters has a cost of 1 unit (I will discuss the interpretability of this below). Assuming a constant cost for mailing is reasonable in this particular case. (However in other settings the cost may vary with the treatment and user.) 
 
-Below I discuss preprocessing the data into the three necesssary variable groupings: the treatment variables $t$, the explanatory variables $x$ and the response variables $y$. Note that in the mr_uplift package the can be several columns each.
+Below I discuss preprocessing the data into the three necesssary variable groupings: the treatment variables, the response variables, and the explanatory variables.
 
 
 ### Encoding the Treatment Variables
@@ -42,7 +42,7 @@ In most uplift models treatments are assigned a dummied out and transformed into
 
 The GOTV treatments have a nested structure where a subsequent treatments includes a previous treatments attributes and includes another one. The base mailing letter is called 'civic duty' and notifies recipient to "DO YOUR CIVIC DUTY AND VOTE!". The subsequent 'hawthorne' mailing letter includes the 'civic duty' information in addition to a note that his voting is public information. Similarly the 'self' letter builds off the 'hawthorne' letter and the 'neighbors' letter builds off the 'self' letter. 
 
-We can include this nested information of treatments as shown below. Note encoding the treatment information this way may or may not be helpful in this example. It is demonstrative of the capabilities of mr_uplift package. In practice I have found this way encoding to be very helpful where there are several ordered choices among each treatment. 
+We can include this nested information of treatments as shown below. Note encoding the treatment information this way may or may not be helpful in this example but is meant to be demonstrative of the capabilities of mr_uplift package. In practice I have found this way encoding to be very helpful where there are several ordered choices among each treatment. 
 
 
 ```{r load_and_preprocess_t}
@@ -69,7 +69,7 @@ print(unique(t))
 ```
 
 ### Encoding the Response Variables
-Here we have two responses: whether someone voted in subsequent election and whether they had a cost or not. The cost is defined on whether an individual recieved one of the 4 different letters.
+Here we have two responses: whether someone voted in subsequent election and whether they had a cost or not. The cost is defined to be one if an individual recieved one of the 4 letters.
 
 ```{r preprocess_y}
 y = data.frame( voted = (gotv[,c('voted')]=='Yes')*1, cost = t[,1])
@@ -93,8 +93,9 @@ With preprocessing of the responses, treatments, and explanatory variables finis
 
 Here I use the 'optimized_loss' functionality that attempts to maximize the PPF curve directly instead of using an MSE loss. In the appendix I compare using this loss with an MSE loss. 
 
-Finally, after the model is built we can create 'erupt_curves' on the test dataset to see how the model performs and the tradeoffs between costs and voter turnout are. A matrix of 'objective_weights' is inputed into this function determining the relative weights of response variables to maximize. Here I set the 'cost' weight to be -1 while varying the 'voting' weight between 0 and 30 (30 was chosen arbitarily). For each of these 'objective_weights' the package calculates the treatment that maximizes the expected weighted sum of response variables. 
+After the model is built we can create 'erupt_curves' on the test dataset to see how the model performs and the tradeoffs between costs and voter turnout are. A matrix of 'objective_weights' is inputed into this function determining the relative weights of response variables to maximize. Here I set the 'cost' weight to be -1 while varying the 'voting' weight between 0 and 30 (30 was chosen arbitarily). For each of these 'objective_weights' the package calculates the treatment that maximizes the expected weighted sum of response variables. 
 
+For a more thorough introduction to the uplift models and erupt curves using the mr_uplift package please see some tutorials [here](https://github.com/Ibotta/mr_uplift/blob/master/examples/mr_uplift_one_response_example.ipynb) and  [here](https://github.com/Ibotta/mr_uplift/blob/master/examples/mr_uplift_multiple_response_example.ipynb).
 
 ```{python}
 import numpy as np
@@ -118,8 +119,8 @@ uplift_model_optim = MRUplift()
 
 #Using the 'optimized_loss' functionality 
 #uplift_model_optim.fit(x, y, t, param_grid = param_grid_optim, n_jobs = 1, optimized_loss = True)
-#uplift_model_optim.save('C:/Users/Larry/Downloads/mr_uplift_gotv_mult_tmt2')
-uplift_model_optim.load('C:/Users/Larry/Downloads/mr_uplift_gotv_mult_tmt2')
+#uplift_model_optim.save('C:/Users/Larry/Documents/Github/mr_upliftR/models/mr_uplift_gotv_mult_tmt2')
+uplift_model_optim.load('C:/Users/Larry/Documents/Github/mr_upliftR/models/mr_uplift_gotv_mult_tmt2')
 
 objective_weights = np.concatenate([np.array([(x) for x in range(30)]).reshape(-1,1), -np.ones(30).reshape(-1,1)], axis = 1)
 erupt_curves_optim, dists_optim = uplift_model_optim.get_erupt_curves(objective_weights = objective_weights)
@@ -128,7 +129,7 @@ erupt_curves_optim, dists_optim = uplift_model_optim.get_erupt_curves(objective_
 
 
 ## Initial Model Results
-We can now plot the results of the MRUplift package in R using ggplot2. Below we can see two types of charts. 
+We can now plot the results of the MRUplift package in R using ggplot2. Below we can see two types of charts. For a general introduction to the methodology found here please see [here](https://medium.com/building-ibotta/estimating-and-visualizing-business-tradeoffs-in-uplift-models-80ff845a5698).
 
 This first chart shows the expected responses (along with 95% CI) for a given set of objective weights signified by the model assignmnet. As the weight on voting increases from zero to 30 we see an increase in both voting activity and and increase in costs. There is also a 'random' assignment ERUPT curve. For each objective weights this 'shuffles' the treatment assignment. The difference betweent the model vs random assignment shows how well the model is learning the heterogeneuous treatment effect (HETE). Since there is no HETE effects in the costs by construction these two curves will be equal.
 
@@ -145,9 +146,18 @@ erupt_curves[,'weights'] = as.numeric(gsub(',-1.0','',erupt_curves[,'weights']))
 dists[,'weights'] = as.numeric(gsub(',-1.0','',dists[,'weights']))
 
 ggplot(erupt_curves, aes(x = weights, y = mean, color = assignment,group = assignment))+geom_line()+facet_grid(response_var_names~., scales = "free_y")+
-  geom_pointrange(aes(ymin=mean-2*std, ymax=mean+2*std))+theme_minimal()
+  geom_pointrange(aes(ymin=mean-2*std, ymax=mean+2*std))+theme_minimal()+
+   xlab('Objective Weight of "Voted" Response (Keeping cost weight=-1)')+
+   ylab('Expected Response')+
+   ggtitle('Expected Responses by Voting Weight')+
+   theme(text = element_text(size=13)) 
 
-ggplot(dists, aes(x = weights , y = percent_tmt, group = as.factor(tmt), colour =tmt))+geom_line()+theme_minimal()
+
+ggplot(dists, aes(x = weights , y = percent_tmt, group = as.factor(tmt), colour =tmt))+geom_line(size = 1.5)+theme_minimal()+
+   xlab('Objective Weight of "Voted" Response (Keeping cost weight=-1)')+
+   ylab('Percent of Users Receiving Treatment')+
+   ggtitle('Distribution of Treatments by Objective Weights')+
+   theme(text = element_text(size=13)) 
 
 
 ```
@@ -164,11 +174,18 @@ colnames(erupt_curves_cost)[1:2] = paste0('cost_',colnames(erupt_curves_cost)[1:
 
 ppf = merge(erupt_curves_voted, erupt_curves_cost, by = c('weights','assignment'))
 
-ggplot(ppf, aes(x = -cost_mean, y = voted_mean, group = assignment, colour = assignment, label = weights))+geom_line()+theme_minimal()
+ggplot(ppf, aes(x = -cost_mean, y = voted_mean, group = assignment, colour = assignment, label = weights))+geom_line(size = 1.5)+theme_minimal()+
+   xlab('Negative Average Cost')+
+   ylab('Average Vote')+
+   ggtitle('Voting by Cost Frontier')+
+      theme(text = element_text(size=13)) 
+
 
 ```
 
-If we wanted to spend an average of $0.50 per person then we can expect the model to 
+Using these charts we can decide where we want to be on these charts in a few ways. One way would be to determine that the benefit of 1 additional vote is worth 10 units of cost. This corresponds to an increase in costs of .75 unis while an increase in voting by 0.065 units. 
+
+Alternatively, if we had a predermined budget of .75 per user we can determine that the optimal set of weights correspond to a weight of 10 for voting. 
 
 
 ## Hey can you not use that treatment? 
@@ -210,27 +227,43 @@ ppf_4_tmts = merge(erupt_curves_voted_4_tmts, erupt_curves_cost_4_tmts, by = c('
 ppf[,'type'] = 'all_tmts'
 ppf_4_tmts[,'type'] = 'subset_tmts'
 ppf_all = rbind(ppf, ppf_4_tmts)
-ggplot(subset(ppf_all, assignment == 'model'), aes(x = -cost_mean, y = voted_mean, group = type, colour = type, label = weights))+geom_line()+theme_minimal()
+ggplot(subset(ppf_all, assignment == 'model'), aes(x = -cost_mean, y = voted_mean, group = type, colour = type, label = weights))+geom_line(size = 1.5)+theme_minimal()+
+   xlab('Negative Average Cost')+
+   ylab('Average Vote')+
+   ggtitle('Voting by Cost Frontier - All Treatment Options vs Subset Treatment Options')+
+      theme(text = element_text(size=13)) 
+
 
 ```
+
+It appears the next strongest option 'self' option. However, using this instead of the 'neighbors' treatment shows dramatically decreased model performance. Whether adverse effects of using that option are outweighed by the measured benefits is something the stakeholder will have to decide. 
 
 ## What Variables are Important? 
+After the model is built and we are ok using all treatments we can now look into what are important features for the model. One use the `permutation_varimp` functionality shown below. This is similar to [Brieman's permutation importance](https://www.stat.berkeley.edu/~breiman/randomforest2001.pdf) except that instead of look at changes in predictions we look at changes in optimal treatment given a set of weights. You can find more information about this feature [here](https://github.com/Ibotta/mr_uplift/blob/master/examples/mr_uplift_variable_importance_example.ipynb). 
 
 ```{python varimp}
-varimp = uplift_model_optim.permutation_varimp(weights = objective_weights[14])
+varimp = uplift_model_optim.permutation_varimp(weights = objective_weights[10])
 ```
 
-```{r varimpplots}
+```{r varimpplots,run= FALSE}
 varimp = py$varimp
 varimp[,'var_names'] = factor(varimp[,'var_names'], varimp[,'var_names'][order(varimp[,'permuation_varimp_metric'])])
-ggplot(varimp, aes(x = var_names, y = permuation_varimp_metric))+geom_point()
+ggplot(varimp, aes(x = var_names, y = permuation_varimp_metric))+geom_point()+theme_minimal()+
+   xlab('Variable Name')+
+   ylab('Permutation Variable Importance')+
+   ggtitle('Variable Importance of Model')+
+      theme(text = element_text(size=13)) 
 
 ```
 
+## Conclusions
+This post went over a hypothetical uplift model problem with the GOTV dataset and the mr_uplift package. It went over a few unique features of the mr_uplift package that I have found to be useful in practice.  
 
 
-##Appendix comparing MSE vs Optimized Loss
-```{python model_build_mse, echo = FALSE}
+## Appendix Comparing MSE vs Optimized Loss
+Fitting uplift models are generally hard because we are interested in estimating the interaction between the treatment(s) and other explanatory variables. I have developed an  [Optimized Loss Function](https://github.com/Ibotta/mr_uplift/blob/master/examples/mr_uplift_new_optimized_loss.ipynb) that optimized the curves displayed here directly. Below is a short comparision between using this loss vs a standard MSE error model. 
+
+```{python model_build_mse,run= FALSE, echo = FALSE}
 
 param_grid_mse = dict(num_nodes=[8,32], 
                   dropout=[ .1,.2,.3], 
@@ -241,8 +274,8 @@ param_grid_mse = dict(num_nodes=[8,32],
 
 uplift_model_mse = MRUplift()
 #uplift_model_mse.fit(x, y, t, param_grid = param_grid_mse, n_jobs = 1)
-#uplift_model_mse.save('C:/Users/Larry/Downloads/mr_uplift_gotv_mult_tmt1')
-uplift_model_mse.load('C:/Users/Larry/Downloads/mr_uplift_gotv_mult_tmt1')
+#uplift_model_mse.save('C:/Users/Larry/Documents/Github/mr_upliftR/models/mr_uplift_gotv_mult_tmt1')
+uplift_model_mse.load('C:/Users/Larry/Documents/Github/mr_upliftR/models/mr_uplift_gotv_mult_tmt1')
 
 erupt_curves_mse, dists_mse = uplift_model_mse.get_erupt_curves(objective_weights = objective_weights)
 ```
@@ -275,8 +308,14 @@ ppf1 = merge(erupt_curves_voted, erupt_curves_cost, by = c('weights','assignment
 ppf[,'type'] = 'optim'
 ppf1[,'type'] = 'mse'
 ppf_all = rbind(ppf, ppf1)
-ggplot(subset(ppf_all, assignment == 'model'), aes(x = -cost_mean, y = voted_mean, group = type, colour = type, label = weights))+geom_line()
+ggplot(subset(ppf_all, assignment == 'model'), aes(x = -cost_mean, y = voted_mean, group = type, colour = type, label = weights))+
+   geom_line(size = 1.5)+theme_minimal()+
+   xlab('Negative Average Cost')+
+   ylab('Average Vote')+
+   ggtitle('Voting by Cost Frontier - Optimized vs MSE Loss Functions')+
+      theme(text = element_text(size=13)) 
+
 
 ```
 
-
+One can see that the frontier of the optimized model is up and to the right of the MSE frontier. This means that the optimized loss funciton is 'better' in the sense that it achieves a higher voter rate for a given cost or a lower cost for a given voter rate. 
